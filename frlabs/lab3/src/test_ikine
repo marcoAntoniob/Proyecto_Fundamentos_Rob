@@ -1,4 +1,68 @@
 #!/usr/bin/env python3
 
+import rospy
+from sensor_msgs.msg import JointState
+from markers import *
+from lab3functions import *
 
-Hola a todos
+from copy import copy
+import matplotlib.pyplot as plt
+
+if __name__ == '__main__':
+
+    rospy.init_node("testInvKine")
+    pub = rospy.Publisher('joint_states', JointState, queue_size=1)
+
+    bmarker      = BallMarker(color['RED'])
+    bmarker_des  = BallMarker(color['GREEN'])
+
+    # Joint names
+    jnames = ['base_link1', 'link1_link2', 'link2_link3','link3_link4', 'link4_link5', 'link5_link6','link6_link7']
+
+    # Desired position
+    xd = np.array([3.1, 2, 1.6])
+    # Initial configuration
+    q0 = np.array([0, 0, 0, 0, 0, 0, 0])
+    # Inverse kinematics
+    q, errors = ikine_es200(xd, q0)
+
+    # Resulting position (end effector with respect to the base link)
+    T = fkine_es200(q)
+    print('Obtained value:\n', np.round(T,3))
+
+    # Red marker shows the achieved position
+    bmarker.xyz(T[0:3,3])
+    # Green marker shows the desired position
+    bmarker_des.xyz(xd)
+
+    # Objeto (mensaje) de tipo JointState
+    jstate = JointState()
+    # Asignar valores al mensaje
+    jstate.header.stamp = rospy.Time.now()
+    jstate.name = jnames
+    # Add the head joint value (with value 0) to the joints
+    jstate.position = q
+
+    # Loop rate (in Hz)
+    rate = rospy.Rate(100)
+    
+    # Graficar la convergencia
+    plt.figure()
+    plt.plot(errors, label=f'Posición final: {xd}')
+    plt.xlabel('Iteraciones')
+    plt.ylabel('Error')
+    plt.yscale('log')  # Escala logarítmica para visualizar mejor la convergencia
+    plt.legend()
+    plt.title('Iteraciones vs error')
+    plt.show()
+
+    # Continuous execution loop
+    while not rospy.is_shutdown():
+        # Current time (needed for ROS)
+        jstate.header.stamp = rospy.Time.now()
+        # Publish the message
+        pub.publish(jstate)
+        bmarker.publish()
+        bmarker_des.publish()
+        # Wait for the next iteration
+        rate.sleep()

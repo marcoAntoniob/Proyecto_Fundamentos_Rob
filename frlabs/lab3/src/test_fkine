@@ -17,9 +17,9 @@ if __name__ == '__main__':
   #q = [2, 2, 2, 2, 2, 2,2]
   #q = [-1, 0.8, 0.2, 0.2, 0.7, 0.8,0.4]
   #q = [0, 0, 0, 0., 1.2, 0.,0.]
-  q = [0, 0,0, 0, 0, 0,0.6]
+  q = [0, 0,0, 0, 0, 0,0]
   # End effector with respect to the base
-  T = fkine_robot(q)
+  T = fkine_es200(q)
   print( np.round(T, 3) )
   bmarker.position(T)
 
