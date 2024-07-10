@@ -3,17 +3,16 @@ import numpy as np
 
 
 # Lectura del modelo del robot a partir de URDF (parsing)
-modelo = rbdl.loadModel('../urdf/kr20.urdf')
+modelo = rbdl.loadModel('../urdf/Robot.urdf')
 # Grados de libertad
 ndof = modelo.q_size
 
-
 # Configuracion articular
-q = np.array([0.4, 0.5, 0.2, 0.3, 0.8, 0.5, 0.6, -0.6,0.6])
+q = np.array([0.4, 0.5, 0.2, 0.3, 0.8, 0.5, 0.6])
 # Velocidad articular
-dq = np.array([0.2, 0.8, 0.7, 0.8, 0.6, 0.9, 1.0,0.1,0.1])
+dq = np.array([0.2, 0.8, 0.7, 0.8, 0.6, 0.9, 0.2])
 # Aceleracion articular
-ddq = np.array([0.1,0.2, 0.5, 0.4, 0.3, 1.0, 0.5,0.1,0.1])
+ddq = np.array([0.1,0.2, 0.5, 0.4, 0.3, 1.0, 0.1])
 
 # Arrays numpy
 zeros = np.zeros(ndof)          # Vector de ceros
@@ -21,38 +20,45 @@ tau   = np.zeros(ndof)          # Para torque
 g     = np.zeros(ndof)          # Para la gravedad
 c     = np.zeros(ndof)          # Para el vector de Coriolis+centrifuga
 M     = np.zeros([ndof, ndof])  # Para la matriz de inercia
-e     = np.eye(ndof)               # Vector identidad
-mi = np.zeros(ndof)          # Vector de ceros
+e     = np.eye(ndof)            # Vector identidad
+mi = np.zeros(ndof)             # Vector de ceros
 
 # Torque dada la configuracion del robot
 rbdl.InverseDynamics(modelo, q, dq, ddq, tau)
 
 # Parte 1: Calcular vector de gravedad, vector de Coriolis/centrifuga,
 # y matriz M usando solamente InverseDynamics
-print(ndof)
+
+print("Parte 1:")
+# vector de gravedad: g = ID(q,0,0)
 rbdl.InverseDynamics(modelo, q, zeros, zeros, g)
-g = np.round(g,3)
-print('MATRIZ GRAVEDAD')
-print(g)
-print(' ')
+print("Vector de gravedad (g):")
+print(np.round(g,3))
+print("\n")
+
+# vector de coriolis: c = (ID(q,dq,0)-g)/dq
 rbdl.InverseDynamics(modelo, q, dq, zeros, c)
 c = c-g
-c= np.round(c,3)
-print('MATRIZ F y C')
-print(c)
-print(' ')
+print("Vector de Coriolis + Centrifuga (c):")
+print(np.round(c,3))
+print("\n")
+
+# matriz de inercia: M[1,:] = (ID(dq,0,e[1,:]) )/e[1,:]
 for i in range(ndof):
   rbdl.InverseDynamics(modelo, q, zeros, e[i,:], mi)
   M[i,:] = mi - g
-  
-print('MATRIZ INERCIA')
+print("Matriz de Inercia (M):")
 print(np.round(M,3))
-print(' ')
+print("\n")
+
+
 # Parte 2: Calcular M y los efectos no lineales b usando las funciones
 # CompositeRigidBodyAlgorithm y NonlinearEffects. Almacenar los resultados
 # en los arreglos llamados M2 y b2
 b2 = np.zeros(ndof)          # Para efectos no lineales
 M2 = np.zeros([ndof, ndof])  # Para matriz de inercia
+
+print("Parte 2:")
 
 rbdl.CompositeRigidBodyAlgorithm(modelo, q, M2)
 print('MATRIZ INERCIA - CRBA')
@@ -90,7 +96,6 @@ print(' ')
 
 
 # Parte 3: Verificacion de la expresion de la dinamica
-
 print('TAU HALLADO AL PRINCIPIO')
 print(np.round(tau,3))
 tau2 = M.dot(ddq)+c+g ################################# ERROR
